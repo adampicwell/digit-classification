@@ -22,5 +22,5 @@ def convert_to_xy(img, lbl):
     # Convert the images into a vector. Each column is one image.
     X = img.reshape(img.shape[0], -1).T
     # Convert labels to a vector, each row is a digit, each column a sample.
-    Y = np.vstack((lbl == x for x in xrange(10)))
+    Y = np.vstack(((lbl == x).astype(int) for x in xrange(10)))
     return X, Y
