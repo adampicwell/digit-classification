@@ -38,22 +38,45 @@ class Network(object):
         db = {}
         L = self.n_layers - 1
         dZ = sigmoid_back(dA, self.Z[L])
-        dW[L] = np.dot(dZ, self.A[L].T)/m
+        dW[L] = np.dot(dZ, self.A[L-1].T)/m
         db[L] = np.sum(dZ, axis=1, keepdims=True)/m
         dA = np.dot(self.W[L].T, dZ)
         for layer in reversed(range(1,self.n_layers-1)):
             dZ = relu_back(dA, self.Z[layer])
-            A_prev = self.A[layer + 1]
+            A_prev = self.A[layer - 1]
             m = A_prev.shape[1]
-            dW[layer] = np.dot(dZ, self.A[layer].T)/m
+            dW[layer] = np.dot(dZ, A_prev.T)/m
             db[layer] = np.sum(dZ, axis=1, keepdims=True)/m
             dA = np.dot(self.W[layer].T, dZ)
         return dW, db
 
     def update_parameters(self, dW, db):
-        for i in range(self.n_layers):
+        for i in range(1,self.n_layers):
             self.W[i] -= self.alpha*dW[i]
             self.b[i] -= self.alpha*db[i]
+
+    def train(self, X_train, Y_train, num_iter=2000, stoch_grad=False):
+        costs = np.zeros((num_iter,))
+        for i in xrange(num_iter):
+            if i % 100 == 0:
+                print "Iteration {}".format(i)
+
+            if stoch_grad:
+                idx = np.random.randint(0, high=X_train.shape[1], size=(1, 100))
+                self.forward_prop(X_train[:, idx])
+                dW, db = self.backward_prop(Y_train[:, idx])
+                self.update_parameters(dW, db)
+                self.forward_prop(X_train[:, idx])
+                costs[i] = cost(self.A[self.n_layers-1], Y_train[:,idx])
+
+            else:
+                self.forward_prop(X_train)
+                dW, db = self.backward_prop(Y_train)
+                self.forward_prop(X_train)
+                self.update_parameters(dW, db)
+                costs[i] = cost(self.A[self.n_layers-1], Y_train)
+
+        return costs
 
 
 def sigmoid(Z):
@@ -84,3 +107,8 @@ def cost(AL, Y):
 
 def predict_from_output(yhat):
     return np.argmax(yhat, axis=0)
+
+
+def compute_accuracy(net, X, Y):
+    yhat = predict_from_output(net.forward_prop(X))
+    return (yhat == predict_from_output(Y)).mean()
